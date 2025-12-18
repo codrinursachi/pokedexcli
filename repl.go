@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"os"
 	"strings"
+
+	"github.com/codrinursachi/pokedexcli/internal/pokecache"
 )
 
 type pokedexLocation struct {
@@ -21,7 +23,7 @@ type pokedexLocations struct {
 
 func cleanInput(text string) []string {
 	result := []string{}
-	for word := range strings.SplitSeq(strings.ToLower(text), " ") {
+	for word := range strings.FieldsSeq(strings.ToLower(text)) {
 		trimmed := strings.TrimSpace(word)
 		if trimmed != "" {
 			result = append(result, trimmed)
@@ -30,13 +32,13 @@ func cleanInput(text string) []string {
 	return result
 }
 
-func commandExit(config *config) error {
+func commandExit(config *config, cache *pokecache.Cache) error {
 	fmt.Print("Closing the Pokedex... Goodbye!\n")
 	os.Exit(0)
 	return nil
 }
 
-func commandHelp(config *config) error {
+func commandHelp(config *config, cache *pokecache.Cache) error {
 	fmt.Print("Welcome to the Pokedex!\n")
 	fmt.Print("Usage:\n\n\n")
 	fmt.Print("help: Displays a help message\n")
@@ -44,15 +46,28 @@ func commandHelp(config *config) error {
 	return nil
 }
 
-func commandMap(config *config) error {
-	req, err := http.Get(config.next)
-	if err != nil {
-		return err
+func commandMap(config *config, cache *pokecache.Cache) error {
+	resultsBytes, ok := cache.Get(config.next)
+	if !ok {
+		req, err := http.Get(config.next)
+		if err != nil {
+			return err
+		}
+		defer req.Body.Close()
+		decoder := json.NewDecoder(req.Body)
+		locationsResp := pokedexLocations{}
+		err = decoder.Decode(&locationsResp)
+		if err != nil {
+			return err
+		}
+		resultsBytes, err = json.Marshal(locationsResp)
+		if err != nil {
+			return err
+		}
+		cache.Add(config.next, resultsBytes)
 	}
-	defer req.Body.Close()
-	decoder := json.NewDecoder(req.Body)
-	pokedexLocations := pokedexLocations{}
-	err = decoder.Decode(&pokedexLocations)
+	var pokedexLocations pokedexLocations
+	err := json.Unmarshal(resultsBytes, &pokedexLocations)
 	if err != nil {
 		return err
 	}
@@ -64,26 +79,39 @@ func commandMap(config *config) error {
 	return nil
 }
 
-func commandMapB(config *config) error {
+func commandMapB(config *config, cache *pokecache.Cache) error {
 	if config.previous == "" {
 		fmt.Print("you're on the first page\n")
 		return nil
 	}
-	req, err := http.Get(config.previous)
+	resultsBytes, ok := cache.Get(config.previous)
+	if !ok {
+		req, err := http.Get(config.previous)
+		if err != nil {
+			return err
+		}
+		defer req.Body.Close()
+		decoder := json.NewDecoder(req.Body)
+		pokedexLocations := pokedexLocations{}
+		err = decoder.Decode(&pokedexLocations)
+		if err != nil {
+			return err
+		}
+		resultsBytes, err = json.Marshal(pokedexLocations)
+		if err != nil {
+			return err
+		}
+		cache.Add(config.previous, resultsBytes)
+	}
+	var locations pokedexLocations
+	err := json.Unmarshal(resultsBytes, &locations)
 	if err != nil {
 		return err
 	}
-	defer req.Body.Close()
-	decoder := json.NewDecoder(req.Body)
-	pokedexLocations := pokedexLocations{}
-	err = decoder.Decode(&pokedexLocations)
-	if err != nil {
-		return err
-	}
-	for _, location := range pokedexLocations.Results {
+	for _, location := range locations.Results {
 		fmt.Printf("%s-area\n", location.Name)
 	}
-	config.next = pokedexLocations.Next
-	config.previous = pokedexLocations.Previous
+	config.next = locations.Next
+	config.previous = locations.Previous
 	return nil
 }

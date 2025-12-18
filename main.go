@@ -4,12 +4,15 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"time"
+
+	"github.com/codrinursachi/pokedexcli/internal/pokecache"
 )
 
 type cliCommand struct {
 	name        string
 	description string
-	callback    func(*config) error
+	callback    func(*config, *pokecache.Cache) error
 }
 
 type config struct {
@@ -45,13 +48,14 @@ func main() {
 		next:     "https://pokeapi.co/api/v2/location/",
 		previous: "",
 	}
+	cache := pokecache.NewCache(5*time.Second)
 	for {
 		fmt.Printf("Pokedex > ")
 		scanner.Scan()
 		text := scanner.Text()
 		user_command := cleanInput(text)
 		if cmd, exists := commands[user_command[0]]; exists {
-			if err := cmd.callback(cfg); err != nil {
+			if err := cmd.callback(cfg, cache); err != nil {
 				fmt.Printf("%v\n", err)
 			}
 		} else {
