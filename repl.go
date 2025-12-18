@@ -517,6 +517,7 @@ func commandCatch(config *config, cache *pokecache.Cache, name string, pokedex p
 	caught := rand.Float64() < catchChance
 	if caught {
 		fmt.Printf("%s was caught!\n", name)
+		fmt.Printf("You may now inspect it with the inspect command.\n")
 		pokedex.pokemons[name] = pokemon
 	} else {
 		fmt.Printf("%s escaped!\n", name)
@@ -540,6 +541,18 @@ func commandInspect(config *config, cache *pokecache.Cache, name string, pokedex
 	fmt.Printf("Types:\n")
 	for _, t := range pokemon.Types {
 		fmt.Printf("  - %s\n", t.Type.Name)
+	}
+	return nil
+}
+
+func commandPokedex(config *config, cache *pokecache.Cache, name string, pokedex pokedex) error {
+	if len(pokedex.pokemons) == 0 {
+		fmt.Printf("You have not caught any Pokemons yet.\n")
+		return nil
+	}
+	fmt.Printf("Your Pokedex:\n")
+	for pname := range pokedex.pokemons {
+		fmt.Printf(" - %s\n", pname)
 	}
 	return nil
 }

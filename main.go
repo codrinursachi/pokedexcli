@@ -61,6 +61,11 @@ func main() {
 			description: "Inspect a caught Pokemon",
 			callback:    commandInspect,
 		},
+		"pokedex": {
+			name:        "pokedex",
+			description: "Show caught Pokemons",
+			callback:    commandPokedex,
+		},
 	}
 	scanner := bufio.NewScanner(os.Stdin)
 	cfg := &config{
