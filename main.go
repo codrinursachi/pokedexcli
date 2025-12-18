@@ -56,6 +56,11 @@ func main() {
 			description: "Attempt to catch a specific Pokemon",
 			callback:    commandCatch,
 		},
+		"inspect": {
+			name:        "inspect",
+			description: "Inspect a caught Pokemon",
+			callback:    commandInspect,
+		},
 	}
 	scanner := bufio.NewScanner(os.Stdin)
 	cfg := &config{
